@@ -1,0 +1,28 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./apps/api"
+    },
+    {
+      "path": "./apps/worker"
+    },
+    {
+      "path": "./apps/web-e2e"
+    },
+    {
+      "path": "./apps/web"
+    },
+    {
+      "path": "./libs/types"
+    },
+    {
+      "path": "./libs/aws"
+    },
+    {
+      "path": "./libs/chunking"
+    }
+  ]
+}
