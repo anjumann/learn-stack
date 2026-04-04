@@ -1,12 +1,13 @@
 services:
   localstack:
-    image: localstack/localstack
+    image: localstack/localstack:3.8
     ports:
       - "4566:4566"
     environment:
       SERVICES: s3,sns,sqs
       DEFAULT_REGION: us-east-1
       LOCALSTACK_AUTH_TOKEN: ${LOCALSTACK_AUTH_TOKEN:-}
+      LOCALSTACK_ACKNOWLEDGE_ACCOUNT_REQUIREMENT: "1"
     volumes:
       - ./init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh
       - localstack_data:/var/lib/localstack
@@ -20,12 +21,12 @@ services:
       - qdrant_data:/qdrant/storage
 
   infinity:
-    image: michaelf34/infinity:latest
+    image: michaelf34/infinity:latest-cpu
     ports:
       - "7997:7997"
-    command: ["v2", "--model-name-or-path", "BAAI/bge-small-en-v1.5", "--port", "7997"]
+    command: ["v2", "--model-id", "BAAI/bge-small-en-v1.5", "--port", "7997"]
     environment:
-      INFINITY_LOG_LEVEL: INFO
+      INFINITY_LOG_LEVEL: info
 
 volumes:
   localstack_data:

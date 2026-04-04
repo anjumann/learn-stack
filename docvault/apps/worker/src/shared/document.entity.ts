@@ -22,7 +22,7 @@ export class Document {
   @Column({ default: 'pending' })
   status: string;
 
-  @Column({ nullable: true, default: null })
+  @Column({ type: 'int', nullable: true, default: null })
   chunkCount: number | null;
 
   @CreateDateColumn()

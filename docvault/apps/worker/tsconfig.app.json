@@ -1,14 +1,30 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist",
+    "outDir": "../../dist/apps/worker",
     "types": ["node"],
-    "rootDir": "src",
+    "baseUrl": "../..",
     "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "target": "es2021"
   },
-  "include": ["src/**/*.ts"],
-  "exclude": []
+  "include": [
+    "src/**/*.ts",
+    "../../libs/aws/src/**/*.ts",
+    "../../libs/types/src/**/*.ts",
+    "../../libs/chunking/src/**/*.ts"
+  ],
+  "exclude": ["**/*.spec.ts"],
+  "references": [
+    {
+      "path": "../../libs/chunking/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/types/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/aws/tsconfig.lib.json"
+    }
+  ]
 }

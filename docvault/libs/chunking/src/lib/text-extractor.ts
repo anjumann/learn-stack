@@ -1,4 +1,9 @@
-import pdfParse from 'pdf-parse';
+import { createRequire } from 'module';
+const _require = createRequire(import.meta.url);
+// pdf-parse is CJS-only — use createRequire so it works under module:nodenext
+const pdfParse = _require('pdf-parse') as (
+  buffer: Buffer
+) => Promise<{ text: string; numpages: number; numrender: number; info: unknown; metadata: unknown; version: string }>;
 import { remark } from 'remark';
 import stripMarkdown from 'strip-markdown';
 
