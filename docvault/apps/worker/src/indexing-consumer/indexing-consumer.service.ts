@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { Counter, Histogram } from 'prom-client';
 import { QdrantClient } from '@qdrant/js-client-rest';
@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { S3Service, SqsService, SnsService } from '@docvault/aws';
 import { TextExtractor, TextChunker, ScannedPdfError } from '@docvault/chunking';
 import { SnsDocumentEvent } from '@docvault/types';
-import { Document } from '../shared/document.entity';
+import { Document, DocumentDocument } from '../shared/document.entity';
 
 const chunksCreatedCounter = new Counter({
   name: 'indexing_chunks_created_total',
@@ -55,8 +55,8 @@ export class IndexingConsumerService implements OnModuleInit {
   private isRunning = false;
 
   constructor(
-    @InjectRepository(Document)
-    private readonly docRepo: Repository<Document>,
+    @InjectModel(Document.name)
+    private readonly docModel: Model<DocumentDocument>,
     config: ConfigService,
   ) {
     this.qdrant = new QdrantClient({ url: config.get('QDRANT_URL', 'http://localhost:6333') });
@@ -108,7 +108,7 @@ export class IndexingConsumerService implements OnModuleInit {
       } catch (err) {
         if (err instanceof ScannedPdfError) {
           this.logger.warn(`Scanned PDF — marking unindexable: ${event.documentId}`);
-          await this.docRepo.update(event.documentId, { status: 'unindexable' });
+          await this.docModel.findByIdAndUpdate(event.documentId, { status: 'unindexable' });
           await this.sqs.delete(this.queueUrl, receiptHandle); // don't retry
           messagesProcessed.labels('indexing-queue', 'unindexable').inc();
           return;
@@ -142,8 +142,8 @@ export class IndexingConsumerService implements OnModuleInit {
       await this.qdrant.upsert('document_chunks', { points, wait: true });
       qdrantEnd();
 
-      // 6. Update Postgres status → indexed
-      await this.docRepo.update(event.documentId, {
+      // 6. Update MongoDB status → indexed
+      await this.docModel.findByIdAndUpdate(event.documentId, {
         status: 'indexed',
         chunkCount: chunks.length,
       });

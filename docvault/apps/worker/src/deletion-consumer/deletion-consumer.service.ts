@@ -1,12 +1,12 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { Counter } from 'prom-client';
 import { S3Service, SqsService } from '@docvault/aws';
 import { SnsDocumentEvent } from '@docvault/types';
-import { Document } from '../shared/document.entity';
+import { Document, DocumentDocument } from '../shared/document.entity';
 
 const messagesProcessed = new Counter({
   name: 'deletion_messages_processed_total',
@@ -24,8 +24,8 @@ export class DeletionConsumerService implements OnModuleInit {
   private isRunning = false;
 
   constructor(
-    @InjectRepository(Document)
-    private readonly docRepo: Repository<Document>,
+    @InjectModel(Document.name)
+    private readonly docModel: Model<DocumentDocument>,
     config: ConfigService,
   ) {
     this.qdrant = new QdrantClient({ url: config.get('QDRANT_URL', 'http://localhost:6333') });
@@ -71,9 +71,9 @@ export class DeletionConsumerService implements OnModuleInit {
       });
       this.logger.log(`  Qdrant vectors deleted for documentId: ${event.documentId}`);
 
-      // 3. Hard-delete Postgres record
-      await this.docRepo.delete({ id: event.documentId });
-      this.logger.log(`  Postgres record deleted: ${event.documentId}`);
+      // 3. Hard-delete MongoDB record
+      await this.docModel.findByIdAndDelete(event.documentId);
+      this.logger.log(`  MongoDB record deleted: ${event.documentId}`);
 
       // 4. Acknowledge the message
       await this.sqs.delete(this.queueUrl, receiptHandle);

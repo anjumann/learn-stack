@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { Counter } from 'prom-client';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,7 +11,7 @@ import {
   PresignResponseDto,
   SnsDocumentEvent,
 } from '@docvault/types';
-import { Document } from './document.entity';
+import { Document, DocumentDocument } from './document.entity';
 
 const uploadCounter = new Counter({
   name: 'document_uploads_total',
@@ -31,8 +31,8 @@ export class DocumentsService {
   private readonly sns = new SnsService();
 
   constructor(
-    @InjectRepository(Document)
-    private readonly repo: Repository<Document>,
+    @InjectModel(Document.name)
+    private readonly docModel: Model<DocumentDocument>,
     private readonly _config: ConfigService,
   ) {}
 
@@ -40,13 +40,13 @@ export class DocumentsService {
     const ext = dto.filename.split('.').pop();
     const s3Key = `uploads/${uuidv4()}.${ext}`;
 
-    const doc = this.repo.create({
+    const doc = new this.docModel({
       filename: dto.filename,
       mimeType: dto.contentType,
       s3Key,
       status: 'pending',
     });
-    await this.repo.save(doc);
+    await doc.save();
 
     const uploadUrl = await this.s3.presignPut(s3Key, dto.contentType);
     uploadCounter.labels('presigned').inc();
@@ -57,7 +57,7 @@ export class DocumentsService {
   async confirm(id: string, s3Key: string): Promise<DocumentDto> {
     const doc = await this.findOneOrFail(id);
     doc.status = 'uploaded';
-    await this.repo.save(doc);
+    await doc.save();
 
     const event: SnsDocumentEvent = {
       eventType: 'document.uploaded',
@@ -83,14 +83,14 @@ export class DocumentsService {
   }
 
   async findAll(): Promise<DocumentDto[]> {
-    const docs = await this.repo.find({ order: { createdAt: 'DESC' } });
+    const docs = await this.docModel.find().sort({ createdAt: -1 });
     return docs.map((d) => this.toDto(d));
   }
 
   async softDelete(id: string): Promise<void> {
     const doc = await this.findOneOrFail(id);
     doc.status = 'deleting';
-    await this.repo.save(doc);
+    await doc.save();
 
     const event: SnsDocumentEvent = {
       eventType: 'document.deleted',
@@ -117,13 +117,13 @@ export class DocumentsService {
     return this.s3.presignGet(doc.s3Key);
   }
 
-  private async findOneOrFail(id: string): Promise<Document> {
-    const doc = await this.repo.findOne({ where: { id } });
+  private async findOneOrFail(id: string): Promise<DocumentDocument> {
+    const doc = await this.docModel.findById(id);
     if (!doc) throw new NotFoundException(`Document ${id} not found`);
     return doc;
   }
 
-  private toDto(doc: Document): DocumentDto {
+  private toDto(doc: DocumentDocument): DocumentDto {
     return {
       id: doc.id,
       filename: doc.filename,

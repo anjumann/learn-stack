@@ -1,11 +1,11 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { Counter } from 'prom-client';
 import { SqsService } from '@docvault/aws';
 import { SnsDocumentEvent } from '@docvault/types';
-import { ActivityLog } from '../shared/activity-log.entity';
+import { ActivityLog, ActivityLogDocument } from '../shared/activity-log.entity';
 
 const messagesProcessed = new Counter({
   name: 'activity_messages_processed_total',
@@ -21,8 +21,8 @@ export class ActivityConsumerService implements OnModuleInit {
   private isRunning = false;
 
   constructor(
-    @InjectRepository(ActivityLog)
-    private readonly repo: Repository<ActivityLog>,
+    @InjectModel(ActivityLog.name)
+    private readonly activityModel: Model<ActivityLogDocument>,
     config: ConfigService,
   ) {
     this.queueUrl = config.get('SQS_ACTIVITY_QUEUE_URL', '');
@@ -53,12 +53,12 @@ export class ActivityConsumerService implements OnModuleInit {
       const envelope = JSON.parse(body);
       const event: SnsDocumentEvent = JSON.parse(envelope.Message ?? body);
 
-      const log = this.repo.create({
+      const log = new this.activityModel({
         eventType: event.eventType,
         documentId: event.documentId,
         filename: event.filename,
       });
-      await this.repo.save(log);
+      await log.save();
 
       this.logger.log(`Activity logged: ${event.eventType} for ${event.filename}`);
       await this.sqs.delete(this.queueUrl, receiptHandle);

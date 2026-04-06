@@ -1,24 +1,25 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-} from 'typeorm';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { HydratedDocument } from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
 
-@Entity('activity_log')
+export type ActivityLogDocument = HydratedDocument<ActivityLog>;
+
+@Schema({ collection: 'activity_log' })
 export class ActivityLog {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @Prop({ type: String, default: () => uuidv4() })
+  _id!: string;
 
-  @Column()
-  eventType: string;
+  @Prop({ required: true })
+  eventType!: string;
 
-  @Column()
-  documentId: string;
+  @Prop({ required: true })
+  documentId!: string;
 
-  @Column()
-  filename: string;
+  @Prop({ required: true })
+  filename!: string;
 
-  @CreateDateColumn()
-  occurredAt: Date;
+  @Prop({ default: () => new Date() })
+  occurredAt!: Date;
 }
+
+export const ActivityLogSchema = SchemaFactory.createForClass(ActivityLog);

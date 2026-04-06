@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { Counter, Histogram } from 'prom-client';
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { SearchRequestDto, SearchResultDto, ChunkDto } from '@docvault/types';
-import { Document } from '../documents/document.entity';
+import { Document, DocumentDocument } from '../documents/document.entity';
 
 const searchCounter = new Counter({
   name: 'search_requests_total',
@@ -25,8 +25,8 @@ export class SearchService {
   private readonly infinityModel: string;
 
   constructor(
-    @InjectRepository(Document)
-    private readonly docRepo: Repository<Document>,
+    @InjectModel(Document.name)
+    private readonly docModel: Model<DocumentDocument>,
     config: ConfigService,
   ) {
     this.qdrant = new QdrantClient({ url: config.get('QDRANT_URL') });
@@ -49,11 +49,11 @@ export class SearchService {
         with_payload: true,
       });
 
-      // 3. Enrich with document metadata from Postgres
+      // 3. Enrich with document metadata from MongoDB
       const documentIds = [
         ...new Set(results.map((r) => r.payload?.['documentId'] as string).filter(Boolean)),
       ];
-      const docs = await this.docRepo.find({ where: { id: In(documentIds) } });
+      const docs = await this.docModel.find({ _id: { $in: documentIds } });
       const docMap = new Map(docs.map((d) => [d.id, d]));
 
       const chunks: ChunkDto[] = results.map((r) => {

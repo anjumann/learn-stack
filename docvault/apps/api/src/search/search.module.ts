@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { SearchService } from './search.service';
 import { SearchController } from './search.controller';
-import { Document } from '../documents/document.entity';
+import { Document, DocumentSchema } from '../documents/document.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Document])],
+  imports: [MongooseModule.forFeature([{ name: Document.name, schema: DocumentSchema }])],
   providers: [SearchService],
   controllers: [SearchController],
 })

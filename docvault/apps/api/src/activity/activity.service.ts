@@ -1,25 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { ActivityDto } from '@docvault/types';
-import { ActivityLog } from './activity-log.entity';
+import { ActivityLog, ActivityLogDocument } from './activity-log.entity';
 
 @Injectable()
 export class ActivityService {
   constructor(
-    @InjectRepository(ActivityLog)
-    private readonly repo: Repository<ActivityLog>,
+    @InjectModel(ActivityLog.name)
+    private readonly activityModel: Model<ActivityLogDocument>,
   ) {}
 
   async findPaginated(
     page = 1,
     limit = 20,
   ): Promise<{ items: ActivityDto[]; total: number; page: number; limit: number }> {
-    const [rows, total] = await this.repo.findAndCount({
-      order: { occurredAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const [rows, total] = await Promise.all([
+      this.activityModel
+        .find()
+        .sort({ occurredAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      this.activityModel.countDocuments(),
+    ]);
 
     return {
       items: rows.map((r) => ({

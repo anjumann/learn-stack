@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { DeletionConsumerService } from './deletion-consumer.service';
-import { Document } from '../shared/document.entity';
+import { Document, DocumentSchema } from '../shared/document.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Document])],
+  imports: [MongooseModule.forFeature([{ name: Document.name, schema: DocumentSchema }])],
   providers: [DeletionConsumerService],
 })
 export class DeletionConsumerModule {}

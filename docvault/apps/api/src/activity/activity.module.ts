@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { ActivityService } from './activity.service';
 import { ActivityController } from './activity.controller';
-import { ActivityLog } from './activity-log.entity';
+import { ActivityLog, ActivityLogSchema } from './activity-log.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ActivityLog])],
+  imports: [MongooseModule.forFeature([{ name: ActivityLog.name, schema: ActivityLogSchema }])],
   providers: [ActivityService],
   controllers: [ActivityController],
   exports: [ActivityService],
